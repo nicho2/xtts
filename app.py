@@ -188,7 +188,7 @@ def predict(
 
     # Retourne la forme d’onde, le fichier audio, les métriques et l’audio de référence
     return (
-        gr.make_waveform(audio="output.wav"),
+        "output.wav",
         "output.wav",
         metrics_text,
         speaker_wav,
