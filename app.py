@@ -10,7 +10,7 @@ import torchaudio
 
 
 #download for mecab
-os.system('python -m unidic download')
+#os.system('python -m unidic download')
 
 # By using XTTS you agree to CPML license https://coqui.ai/cpml
 os.environ["COQUI_TOS_AGREED"] = "1"
@@ -28,7 +28,7 @@ import gradio as gr
 from scipy.io.wavfile import write
 from pydub import AudioSegment
 
-from TTS.api import TTS
+#from TTS.api import TTS
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 from TTS.utils.generic_utils import get_user_data_dir
