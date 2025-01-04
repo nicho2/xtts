@@ -83,6 +83,7 @@ def predict(
     voice_cleanup,
     no_lang_auto_detect,
     agree,
+    progress=gr.Progress(track_tqdm=True)
 ):
     """
     Fonction principale pour générer la voix à partir du texte et d’un échantillon audio.
@@ -177,8 +178,8 @@ def predict(
         wav_out_list = []
 
         t0 = time.time()
-        #with gr.Progress() as progress:
-        for i, segment in enumerate(tqdm(chunks, desc="Synthèse TTS")):
+
+        for segment in tqdm(chunks, desc="Synthèse TTS", unit="segment", colour="green"):
             t1 = time.time()
             out = model.inference(
                 segment,
