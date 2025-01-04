@@ -177,7 +177,8 @@ def predict(
         wav_out_list = []
 
         t0 = time.time()
-        for segment in tqdm(chunks, desc="Synthèse TTS", unit="segment", colour="green"):
+        #with gr.Progress() as progress:
+        for i, segment in enumerate(tqdm(chunks, desc="Synthèse TTS")):
             t1 = time.time()
             out = model.inference(
                 segment,
@@ -189,15 +190,15 @@ def predict(
             )
             inference_time = time.time() - t1
             print(f"Temps de génération audio (ms) : {round(inference_time*1000)}\n")
-            real_time_factor = (time.time() - t0) / out['wav'].shape[-1] * 24000
+            real_time_factor = (time.time() - t1) / out['wav'].shape[-1] * 24000
             print(f"Facteur temps réel (RTF) : {real_time_factor:.2f}\n")
+
+            #progress(i + 1, total=len(chunks), desc=f"Synthèse segment {i + 1}/{len(chunks)}")
 
             wav_out_list.append(torch.tensor(out["wav"]))
 
         inference_time = time.time() - t0
         metrics_text += f"Temps de génération audio (ms) : {round(inference_time*1000)}\n"
-        real_time_factor = (time.time() - t0) / out['wav'].shape[-1] * 24000
-        metrics_text += f"Facteur temps réel (RTF) : {real_time_factor:.2f}\n"
 
         # 3) Concaténer l’audio si nécessaire
         if len(wav_out_list) == 1:
