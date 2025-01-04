@@ -11,3 +11,4 @@ langid
 deepspeed
 pydub
 gradio
+chardet

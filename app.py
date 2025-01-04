@@ -18,11 +18,9 @@ from TTS.utils.manage import ModelManager
 # pip install langid
 import langid
 
-import base64
-import csv
-from io import StringIO
-import datetime
+import chardet
 import re
+from tqdm import tqdm
 
 # Gradio pour l’interface Web locale
 # pip install gradio
@@ -62,6 +60,19 @@ print("Langues supportées :", supported_languages)
 ###################################################
 # Partie 2 : Fonction de prédiction (TTS + Voice Clone)
 ###################################################
+
+
+def split_into_sentences(text):
+    # Découpe approximative par ponctuation
+    # et préserve la ponctuation finale dans chaque morceau
+    sentences = re.split(r'([.!?])', text)
+    # sentences renvoie quelque chose comme ["Ceci est une phrase", ".", " Ceci est une autre phrase", ".", ""]
+    # Il faut recoller la ponctuation
+    merged = []
+    for i in range(0, len(sentences)-1, 2):
+        merged.append(sentences[i].strip() + sentences[i+1])
+    return [s.strip() for s in merged if s.strip()]
+
 
 def predict(
     prompt,
@@ -136,9 +147,9 @@ def predict(
     if len(prompt) < 2:
         gr.Warning("Le texte est trop court. Veuillez entrer un texte plus long.")
         return None, None, None, None
-    if len(prompt) > 200:
-        gr.Warning("Limite de 200 caractères dépassée pour cette démonstration.")
-        return None, None, None, None
+    #if len(prompt) > 200:
+    #    gr.Warning("Limite de 200 caractères dépassée pour cette démonstration.")
+    #    return None, None, None, None
 
     metrics_text = ""
     try:
@@ -160,22 +171,42 @@ def predict(
 
         # Génération audio
         print("Génération de la voix...")
+        # 1) Découper le texte
+        chunks = split_into_sentences(prompt)  # ou split_into_sentences
+        # 2) Pour chaque segment, générer l’audio
+        wav_out_list = []
+
         t0 = time.time()
-        out = model.inference(
-            prompt,
-            language,
-            gpt_cond_latent,
-            speaker_embedding,
-            repetition_penalty=5.0,
-            temperature=0.75,
-        )
+        for segment in tqdm(chunks, desc="Synthèse TTS", unit="segment", colour="green"):
+            t1 = time.time()
+            out = model.inference(
+                segment,
+                language,
+                gpt_cond_latent,
+                speaker_embedding,
+                repetition_penalty=5.0,
+                temperature=0.75,
+            )
+            inference_time = time.time() - t1
+            print(f"Temps de génération audio (ms) : {round(inference_time*1000)}\n")
+            real_time_factor = (time.time() - t0) / out['wav'].shape[-1] * 24000
+            print(f"Facteur temps réel (RTF) : {real_time_factor:.2f}\n")
+
+            wav_out_list.append(torch.tensor(out["wav"]))
+
         inference_time = time.time() - t0
         metrics_text += f"Temps de génération audio (ms) : {round(inference_time*1000)}\n"
         real_time_factor = (time.time() - t0) / out['wav'].shape[-1] * 24000
         metrics_text += f"Facteur temps réel (RTF) : {real_time_factor:.2f}\n"
 
+        # 3) Concaténer l’audio si nécessaire
+        if len(wav_out_list) == 1:
+            final_wav = wav_out_list[0]
+        else:
+            final_wav = torch.cat(wav_out_list, dim=0)
+
         # Sauvegarde du fichier WAV
-        torchaudio.save("output.wav", torch.tensor(out["wav"]).unsqueeze(0), 24000)
+        torchaudio.save("output.wav", final_wav.unsqueeze(0), 24000)
 
     except RuntimeError as e:
         print("Erreur d’exécution (RuntimeError) :", str(e))
@@ -194,6 +225,35 @@ def predict(
         speaker_wav,
     )
 
+
+def read_txt_file(txt_file):
+    """
+    Lit le fichier .txt si fourni,
+    renvoie son contenu sous forme de str.
+    """
+    if txt_file is None:
+        return ""
+    # txt_file est un dictionnaire si type="file",
+    # ou une chaîne de caractères (chemin) si type="filepath".
+    # Ici on suppose type="filepath" pour un usage local :
+    # Lecture en binaire pour détecter l'encodage
+    with open(txt_file, 'rb') as f:
+        raw_data = f.read()
+
+    # Détection de l'encodage
+    detection = chardet.detect(raw_data)
+    detected_encoding = detection['encoding']
+
+    # Parfois, chardet peut renvoyer None ou se tromper ;
+    # on peut mettre un encodage par défaut (utf-8, cp1252, etc.)
+    if detected_encoding is None:
+        detected_encoding = 'utf-8'
+
+    # Lecture avec l'encodage détecté
+    with open(txt_file, 'r', encoding=detected_encoding, errors='replace') as f:
+        text = f.read()
+
+    return text
 ###################################################
 # Partie 3 : Interface Gradio locale
 ###################################################
@@ -242,10 +302,20 @@ with gr.Blocks(analytics_enabled=False) as demo:
                 label="Text Prompt",
                 value="Bonjour, ceci est un essai de voix clonée."
             )
+            # Fichier texte
+            input_txt_file_gr = gr.File(
+                label="Fichier texte (optionnel)",
+                type="filepath"
+            )
+
+            # Dès que le fichier change, on lit son contenu,
+            # et on injecte le résultat dans text_box
+            input_txt_file_gr.change(fn=read_txt_file, inputs=input_txt_file_gr, outputs=input_text_gr)
+
             language_gr = gr.Dropdown(
                 label="Language",
                 choices=supported_languages,
-                value="en"
+                value="fr"
             )
             ref_gr = gr.Audio(
                 label="Reference Audio",
