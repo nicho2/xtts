@@ -71,7 +71,30 @@ def split_into_sentences(text):
     merged = []
     for i in range(0, len(sentences)-1, 2):
         merged.append(sentences[i].strip() + sentences[i+1])
-    return [s.strip() for s in merged if s.strip()]
+    # 3) Nettoyage des guillemets et des sauts de ligne
+    final_sentences = []
+    for s in merged:
+        # Retire espaces superflus
+        s = s.strip()
+        if not s:
+            continue
+
+        # a) Supprimer les guillemets (ici " normaux, éventuellement “ ” « » si besoin)
+        s = re.sub(r'[\"“”«»]', '', s)
+
+        # b) Remplacer les doubles sauts de ligne (ou multiples) par des ":"
+        #    Ici, \n{2,} capture deux ou plus retours à la ligne successifs
+        s = re.sub(r'\n{2,}', '..', s)
+
+        # c) Supprimer les retours à la ligne restants
+        s = s.replace('\n', '')
+
+        # On retire les espaces finaux à nouveau
+        s = s.strip()
+        if s:
+            final_sentences.append(s)
+
+    return final_sentences
 
 
 def predict(
@@ -168,12 +191,13 @@ def predict(
         latent_calculation_time = time.time() - t_latent
 
         # Correction provisoire ponctuation
-        prompt = re.sub(r"([^\x00-\x7F]|\w)(\.|\。|\?)", r"\1 \2\2", prompt)
-
+        #prompt = re.sub(r"([^\x00-\x7F]|\w)(\.|\。|\?)", r"\1 \2\2", prompt)
+        #print(prompt)
         # Génération audio
         print("Génération de la voix...")
         # 1) Découper le texte
         chunks = split_into_sentences(prompt)  # ou split_into_sentences
+        print(chunks)
         # 2) Pour chaque segment, générer l’audio
         wav_out_list = []
 
@@ -190,7 +214,7 @@ def predict(
                 temperature=0.75,
             )
             inference_time = time.time() - t1
-            print(f"Temps de génération audio (ms) : {round(inference_time*1000)}\n")
+            print(f"Temps de génération audio (ms) : {round(inference_time*1000)}  ")
             real_time_factor = (time.time() - t1) / out['wav'].shape[-1] * 24000
             print(f"Facteur temps réel (RTF) : {real_time_factor:.2f}\n")
 
