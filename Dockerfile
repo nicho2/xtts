@@ -45,6 +45,7 @@ WORKDIR /app
 # 6) Copier vos sources
 # -----------------------------------------------------------------------------
 COPY examples /app/examples
+COPY tts /app/tts
 COPY README.md /app/README.md
 COPY app.py /app/
 COPY start.sh /app/
@@ -72,6 +73,8 @@ RUN /bin/bash -c "source /app/venv/bin/activate \
 # -----------------------------------------------------------------------------
 EXPOSE 7860
 
+ENV COQUI_TOS_AGREED="1"
+ENV TTS_HOME="/app"
 # -----------------------------------------------------------------------------
 # 10) Commande de démarrage
 # -----------------------------------------------------------------------------
