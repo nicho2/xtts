@@ -20,3 +20,4 @@ pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
    https://github.com/microsoft/DeepSpeed/issues/6709
    
  - and pip install deepspeed_wheels/deepspeed_0.16.2_cuda12.6_py310/deepspeed-0.16.2+unknown-cp310-cp310-win_amd64.whl
+

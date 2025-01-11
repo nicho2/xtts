@@ -1,0 +1,13 @@
+
+services:
+  xtts:
+    image: nicho267/xtts
+    runtime: nvidia  # Activer le support GPU via le runtime NVIDIA
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # Utiliser tous les GPUs disponibles
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    ports:
+      - "7860:7860"  # Exposer le port 7860 pour l'application
+    volumes:
+      - ./examples:/app/examples  # Si nécessaire, lier localement
+
