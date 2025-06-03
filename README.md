@@ -6,7 +6,7 @@
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 
-## for install deepspeed for windows
+## To install deepspeed on Windows
 
   - follow : https://github.com/erew123/deepspeedpatcher (useful tool)
     - in my case, i have commented :
